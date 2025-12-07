@@ -1,17 +1,48 @@
-let img;
-let img_data = []; 
+const M_PER_DEG = 111320;
+
+let map;
+let map_metadata = {
+    xscale_deg: 0.0002777777777777777775,
+    yscale_deg: 0.0002777777777777777775,
+    emin_m: 117.5,
+    emax_m: 691.94488525391,
+    extent: {
+        xmin: 110.3387499888889067,
+        ymin: 24.8320833444444418,
+        xmax: 110.5731944333333558,
+        ymax: 25.1384722333333315,
+    },
+
+    //latitude of pixel center
+    lat(r) {
+        return (
+            this.extent.ymax - (r + 0.5) * (this.extent.ymax - this.extent.ymin) / map.height
+        ) * Math.PI / 180;
+    },
+
+    //discrete slope approximation using central difference method
+    dx_m(r) { return this.xscale_deg * M_PER_DEG * Math.cos(this.lat(r)); },
+    dy_m( ) { return this.yscale_deg * M_PER_DEG; },
+    dzdx(r, c) { return (getElevAt(c + 1, r) - getElevAt(c - 1, r)) / (2 * this.dx_m(r)); },
+    dzdy(r, c) { return (getElevAt(c, r + 1) - getElevAt(c, r - 1)) / (2 * this.dy_m( )); },
+    slope(r, c) { 
+        return (
+            Math.atan(Math.sqrt(this.dzdx(r,c) * this.dzdx(r,c) + this.dzdy(r,c) * this.dzdy(r,c)))
+        ) * 180 / Math.PI;
+    }
+}; 
 let slopes = [];
 
 const pixel_scale = 1.; //TODO implement properly with new layer system or remove
 
 const ELEV_RANGE = {
-    max: 691.94488525391,
-    min: 117.5,
+    max: map_metadata.emax_m,
+    min: map_metadata.emin_m,
     get range() { return this.max - this.min; }
-}
+};
 
 let bounds;
-let checkBounds;
+let check_bounds;
 
 let mouse;
 
@@ -25,61 +56,84 @@ let ocean = {
     }
 }
 
+let show_slope_overlay = false;
+let slope_overlay;
 let overlay;
 
-function preload() {
-    img = loadImage("map.png");
-}
-
-function setup() {
-    // define bounds and bounds checker
-    bounds = {
-        w: img.width * pixel_scale,
-        h: img.height * pixel_scale,
-    }
-    checkBounds = {
-        x: (x) => 0 <= x && x < bounds.w,
-        y: (y) => 0 <= y && y < bounds.h,
-        p(x, y) { return this.x(x) && this.y(y); },
+// =========================
+//   p5js-called functions
+// =========================
+{
+    //preload map
+    function preload() {
+        map = loadImage("map.png");
     }
 
-    // initialize canvas layers
-    createCanvas(bounds.w, bounds.h);
-    bg = createGraphics(bounds.w, bounds.h);
-    bg.image(img, 0, 0);
-    img.loadPixels();
-    overlay = createGraphics(bounds.w, bounds.h);
-    overlay.clear();
-    overlay.loadPixels();
+    //perform setup
+    function setup() {
+        // define bounds and bounds checker
+        bounds = {
+            w: map.width * pixel_scale,
+            h: map.height * pixel_scale,
+        }
+        check_bounds = {
+            x: (x) => 0 <= x && x < bounds.w,
+            y: (y) => 0 <= y && y < bounds.h,
+            p(x, y) { return this.x(x) && this.y(y); },
+        }
 
-    // perform per-pixel setup operations
-    iterateMap(updatePuddle);
-    overlay.updatePixels();
+        // initialize canvas layers
+        createCanvas(bounds.w, bounds.h);
+        bg = createGraphics(bounds.w, bounds.h);
+        bg.image(map, 0, 0);
+        map.loadPixels();
+        overlay = createGraphics(bounds.w, bounds.h);
+        overlay.clear();
+        overlay.loadPixels();
+        slope_overlay = createGraphics(bounds.w, bounds.h);
+        slope_overlay.clear();
+        slope_overlay.loadPixels();
 
-    // begin DOM update loop
-    updateDOM();
+        // perform per-pixel setup operations
+        iterateMap((r, c) => {
+            updatePuddle(r, c);
+            setSlope(r, c);
+        });
+        slope_overlay.updatePixels();
+        overlay.updatePixels();
+
+        // begin DOM update loop
+        updateDOM();
+    }
+
+    //draw each frame
+    function draw() {
+        background(0);
+        image(bg, 0, 0);
+        if (show_slope_overlay) 
+            image(slope_overlay, 0, 0);
+        image(overlay, 0, 0);
+    }
 }
 
-function draw() {
-    background(0);
-    image(bg, 0, 0);
-    image(overlay, 0, 0);
-}
+// =========================
+//   helper functions
+// =========================
 
 function iterateMap(fn) {
-    for (let r = 0; r < img.height; r++) {
-        for (let c = 0; c < img.width; c++) {
+    for (let r = 0; r < map.height; r++) {
+        for (let c = 0; c < map.width; c++) {
             fn(r, c);
         }
     }
 }
 
 function dilate(n) {
-    
+    //TODO
 }
 
 function getValue(r, c) {
-    return img.pixels[(r * img.width + c) * 4];
+    return map.pixels[(r * map.width + c) * 4];
 }
 
 // update the ocean
@@ -92,12 +146,29 @@ function updateOcean() {
 // update a single pixel in the ocean grid
 function updatePuddle(r, c) {
     if (ocean.threshold > getValue(r, c)) {
-        writeToOverlay(r, c, ocean.color);
+        writeToOverlay(r, c, ocean.color, overlay);
     }
 }
 
-function writeToOverlay(r, c, col) {
-    const i = 4 * (r * img.width + c);
+// calculate and set slope value at a given position
+function setSlope(r, c) {
+    if (slopes[r] === undefined) {
+        slopes[r] = [];
+    }
+    slopes[r][c] = map_metadata.slope(r, c);
+
+    // map the color from a range of 0-90 to 0-255 (slope > 90 would be an overhang)
+    col = slopes[r][c] / 90. * 255
+    writeToOverlay(r, c, {
+        r: col,
+        g: col,
+        b: col,
+        a: 255.
+    }, slope_overlay);
+}
+
+function writeToOverlay(r, c, col, overlay) {
+    const i = 4 * (r * map.width + c);
     overlay.pixels[i + 0] = col.r;
     overlay.pixels[i + 1] = col.g;
     overlay.pixels[i + 2] = col.b;
@@ -109,19 +180,32 @@ function mapRangeToElev(val) {
     return ELEV_RANGE.min + (val / 255.) * (ELEV_RANGE.range);
 }
 function getElevAt(x, y) {
-    return checkBounds.p(x, y) ? mapRangeToElev(getValue(y, x)) : "OOB";
+    return check_bounds.p(x, y) ? mapRangeToElev(getValue(y, x)) : "OOB";
+}
+function getSlopeAt(x, y) {
+    return check_bounds.p(x, y) ? slopes[y][x] : "OOB";
 }
 
 
-// DOM FUNCTIONS
-// Handle regular DOM updates
+// =========================
+//   DOM interaction
+// =========================
 let coords;
 let elevation;
+let slope;
+let slope_overlay_box;
 let sea_level;
 let sea_level_value;
+
 document.addEventListener("DOMContentLoaded", () => {
     coords = document.getElementById("coords");
     elevation = document.getElementById("elevation");
+    slope = document.getElementById("slope");
+    slope_overlay_box = document.getElementById("slope-overlay-box")
+
+    slope_overlay_box.checked = show_slope_overlay;
+    slope_overlay_box.addEventListener("input", (event) => show_slope_overlay = event.target.checked);
+
     sea_level = document.getElementById("sea-level");
     sea_level_value = document.getElementById("sea-level-value");
 
@@ -131,8 +215,9 @@ document.addEventListener("DOMContentLoaded", () => {
     sea_level.addEventListener("input", updateSeaLevel);
 });
 
-// perform per-frame updates
+// Handle regular DOM updates
 function updateDOM() {
+    // convert mouse coords into array indexes
     mouse = {
         x: round(mouseX),
         y: round(mouseY),
@@ -141,6 +226,9 @@ function updateDOM() {
     // perform updates
     updateCoords();
     updateElevation();
+    updateSlope();
+
+    //continue the loop
     requestAnimationFrame(updateDOM);
 }
 
@@ -149,7 +237,10 @@ function updateCoords() {
     coords.textContent = `X: ${mouse.x}\nY: ${mouse.y}`;
 }
 function updateElevation() {
-    elevation.textContent = `E: ${getElevAt(mouse.x, mouse.y)}`;
+    elevation.textContent = `Elevation (m): ${getElevAt(mouse.x, mouse.y)}`;
+}
+function updateSlope() {
+    slope.textContent = `Slope: ${getSlopeAt(mouse.x, mouse.y)}`;
 }
 function updateSeaLevel() {
     ocean.threshold = sea_level.value;
