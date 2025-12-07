@@ -32,6 +32,7 @@ let map_metadata = {
     }
 }; 
 let slopes = [];
+let dilated = [];
 
 const pixel_scale = 1.; //TODO implement properly with new layer system or remove
 
@@ -57,7 +58,9 @@ let ocean = {
 }
 
 let show_slope_overlay = false;
+let show_group_overlay = false;
 let slope_overlay;
+let group_overlay;
 let overlay;
 
 // =========================
@@ -87,20 +90,25 @@ let overlay;
         bg = createGraphics(bounds.w, bounds.h);
         bg.image(map, 0, 0);
         map.loadPixels();
-        overlay = createGraphics(bounds.w, bounds.h);
-        overlay.clear();
-        overlay.loadPixels();
         slope_overlay = createGraphics(bounds.w, bounds.h);
         slope_overlay.clear();
         slope_overlay.loadPixels();
+        group_overlay = createGraphics(bounds.w, bounds.h);
+        group_overlay.clear();
+        group_overlay.loadPixels();
+        overlay = createGraphics(bounds.w, bounds.h);
+        overlay.clear();
+        overlay.loadPixels();
 
         // perform per-pixel setup operations
         iterateMap((r, c) => {
             updatePuddle(r, c);
             setSlope(r, c);
+            dilate(r, c, 5);
         });
         slope_overlay.updatePixels();
         overlay.updatePixels();
+        group_overlay.updatePixels();
 
         // begin DOM update loop
         updateDOM();
@@ -112,6 +120,8 @@ let overlay;
         image(bg, 0, 0);
         if (show_slope_overlay) 
             image(slope_overlay, 0, 0);
+        if (show_group_overlay)
+            image(group_overlay, 0, 0);
         image(overlay, 0, 0);
     }
 }
@@ -126,10 +136,6 @@ function iterateMap(fn) {
             fn(r, c);
         }
     }
-}
-
-function dilate(n) {
-    //TODO
 }
 
 function getValue(r, c) {
@@ -152,9 +158,8 @@ function updatePuddle(r, c) {
 
 // calculate and set slope value at a given position
 function setSlope(r, c) {
-    if (slopes[r] === undefined) {
+    if (slopes[r] === undefined)
         slopes[r] = [];
-    }
     slopes[r][c] = map_metadata.slope(r, c);
 
     // map the color from a range of 0-90 to 0-255 (slope > 90 would be an overhang)
@@ -163,8 +168,31 @@ function setSlope(r, c) {
         r: col,
         g: col,
         b: col,
-        a: 255.
+        a: 255
     }, slope_overlay);
+}
+
+function dilate(r, c, n = 3) {
+    if (dilated[r] === undefined)
+        dilated[r] = [];
+    
+    const rad = Math.floor(n / 2);
+    let max = -Infinity;
+    for (let y = -rad; y <= rad; y++) {
+        for (let x = -rad; x <= rad; x++) {
+            if (check_bounds.p(c + x, r + y)) 
+                max = Math.max(max, getValue(r + y, c + x));
+        }
+    }
+    is_local_maxima = max == getValue(r, c);
+    dilated[r][c] = col = is_local_maxima ? max : 0;
+
+    writeToOverlay(r, c, {
+        r: col,
+        g: 0,
+        b: 0,
+        a: is_local_maxima ? 255 : 0
+    }, group_overlay);
 }
 
 function writeToOverlay(r, c, col, overlay) {
@@ -194,21 +222,25 @@ let coords;
 let elevation;
 let slope;
 let slope_overlay_box;
+let group_overlay_box;
 let sea_level;
 let sea_level_value;
 
 document.addEventListener("DOMContentLoaded", () => {
     coords = document.getElementById("coords");
     elevation = document.getElementById("elevation");
+
     slope = document.getElementById("slope");
     slope_overlay_box = document.getElementById("slope-overlay-box")
-
     slope_overlay_box.checked = show_slope_overlay;
     slope_overlay_box.addEventListener("input", (event) => show_slope_overlay = event.target.checked);
 
+    group_overlay_box = document.getElementById("group-overlay-box")
+    group_overlay_box.checked = show_group_overlay;
+    group_overlay_box.addEventListener("input", (event) => show_group_overlay = event.target.checked);
+
     sea_level = document.getElementById("sea-level");
     sea_level_value = document.getElementById("sea-level-value");
-
     sea_level.min = -1;
     sea_level.max = 256;
     sea_level.value = -1;
