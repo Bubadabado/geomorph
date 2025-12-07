@@ -33,6 +33,8 @@ let map_metadata = {
 }; 
 let slopes = [];
 let dilated = [];
+let labels = [];
+let current_label = 1;
 
 const pixel_scale = 1.; //TODO implement properly with new layer system or remove
 
@@ -84,6 +86,8 @@ let overlay;
             y: (y) => 0 <= y && y < bounds.h,
             p(x, y) { return this.x(x) && this.y(y); },
         }
+        labels = [...Array(bounds.h)].map(() => Array(bounds.w).fill(0));
+        console.log(labels)
 
         // initialize canvas layers
         createCanvas(bounds.w, bounds.h);
@@ -106,6 +110,8 @@ let overlay;
             setSlope(r, c);
             dilate(r, c, 5);
         });
+        labelCntdCmpts();
+
         slope_overlay.updatePixels();
         overlay.updatePixels();
         group_overlay.updatePixels();
@@ -117,6 +123,7 @@ let overlay;
     //draw each frame
     function draw() {
         background(0);
+        noSmooth();
         image(bg, 0, 0);
         if (show_slope_overlay) 
             image(slope_overlay, 0, 0);
@@ -172,6 +179,7 @@ function setSlope(r, c) {
     }, slope_overlay);
 }
 
+//perform a dilation at r,c with kernel of shape n,n
 function dilate(r, c, n = 3) {
     if (dilated[r] === undefined)
         dilated[r] = [];
@@ -185,7 +193,7 @@ function dilate(r, c, n = 3) {
         }
     }
     is_local_maxima = max == getValue(r, c);
-    dilated[r][c] = col = is_local_maxima ? max : 0;
+    dilated[r][c] = col = is_local_maxima ? max : -1;
 
     writeToOverlay(r, c, {
         r: col,
@@ -193,6 +201,34 @@ function dilate(r, c, n = 3) {
         b: 0,
         a: is_local_maxima ? 255 : 0
     }, group_overlay);
+}
+
+function labelCntdCmpts() {
+    iterateMap((r, c) => {
+        if (dilated[r][c] !== -1 && labels[r][c] == 0) {
+            let stack = [];
+            stack.push({
+                r: r,
+                c: c
+            });
+            while (stack.length > 0) {
+                p = stack.pop();
+                if (labels[p.r][p.c] == 0) {
+                    labels[p.r][p.c] = current_label;
+                    for (let rr = -1; rr <= 1; rr++) {
+                        for (let cc = -1; cc <= 1; cc++) {
+                            const r2 = p.r + rr;
+                            const c2 = p.c + cc;
+                            if ((rr === 0 && cc === 0) || !check_bounds.p(c2, r2) || dilated[r2][c2] === -1)
+                                continue;
+                            stack.push({ r: r2, c: c2 });
+                        }
+                    }
+                }
+            }
+            current_label++;
+        }
+    });
 }
 
 function writeToOverlay(r, c, col, overlay) {
