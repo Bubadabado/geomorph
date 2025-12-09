@@ -1,3 +1,9 @@
 #coords {
     white-space: pre;    
 }
+
+/* canvas {
+    image-rendering: pixelated;
+    width: auto !important;
+    height: auto !important;
+} */
