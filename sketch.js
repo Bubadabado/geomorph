@@ -26,6 +26,7 @@ const SELECT = "select";
 
 let group_data = {
     labels: [],
+    no_select: [],
     selected: [],
     selected_metadata: []
 }
@@ -36,6 +37,10 @@ let mouse_prev = {
 const SELECTION_TYPES = {
     individual: "individual",
     box_select: "box",
+}
+const ADD_OR_REMOVE = {
+    add: "add",
+    remove: "remove",
 }
 const SELECTION_COL = makeCol(() => 255, 160);
 
@@ -187,12 +192,12 @@ function mousePressed() {
             break;
         default:
     }
-    updateSelectionTable();
+    // updateSelectionTable();
 }
 function mouseReleased() {
     if (selection_type == SELECTION_TYPES.box_select) {
         updateSelectionBox(mouse_prev.y, mouse_prev.x, mouse.y, mouse.x);
-        updateSelectionTable();
+        // updateSelectionTable();
     }
 }
 
@@ -237,8 +242,8 @@ function updateSelection(r, c) {
             c: c
         });
 
-        group_data.selected[r][c] = !group_data.selected[r][c];
-        group_data.selected_metadata[label].selected = group_data.selected[r][c];
+        group_data.selected[r][c] = add_or_remove; // TOGGLE !group_data.selected[r][c];
+        group_data.selected_metadata[label].selected = add_or_remove; // TOGGLE group_data.selected[r][c];
         while (stack.length > 0) {
             p = stack.pop();
             for (let rr = -1; rr <= 1; rr++) {
@@ -254,8 +259,8 @@ function updateSelection(r, c) {
 
                     stack.push({ r: r2, c: c2 });
 
-                    group_data.selected[r2][c2] = !group_data.selected[r2][c2];
-                    group_data.selected_metadata[label].selected = group_data.selected[r][c];
+                    group_data.selected[r2][c2] = add_or_remove; // TOGGLE !group_data.selected[r2][c2];
+                    group_data.selected_metadata[label].selected = add_or_remove; // TOGGLE group_data.selected[r][c];
                 }
             }
         }
@@ -283,8 +288,8 @@ function updateSelectionBox(rr1, cc1, rr2, cc2) {
                         c: c
                     });
 
-                    group_data.selected[r][c] = !group_data.selected[r][c];
-                    group_data.selected_metadata[label].selected = group_data.selected[r][c];
+                    group_data.selected[r][c] = add_or_remove;
+                    group_data.selected_metadata[label].selected = add_or_remove;
                     while (stack.length > 0) {
                         p = stack.pop();
                         for (let rr = -1; rr <= 1; rr++) {
@@ -301,8 +306,8 @@ function updateSelectionBox(rr1, cc1, rr2, cc2) {
 
                                 stack.push({ r: r2, c: c2 });
 
-                                group_data.selected[r2][c2] = !group_data.selected[r2][c2];
-                                group_data.selected_metadata[label].selected = group_data.selected[r][c];
+                                group_data.selected[r2][c2] = add_or_remove;
+                                group_data.selected_metadata[label].selected = add_or_remove;
                                 visited[r2][c2] = true;
                             }
                         }

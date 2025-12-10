@@ -17,8 +17,11 @@ let show_group_overlay = false;
 let selected_img;
 
 let selection_type_options;
+let add_or_remove_options;
+let add_or_remove;
 let selection_type;
 let selection_table;
+let pull_selection_data;
 
 document.addEventListener("DOMContentLoaded", () => {
     coords = document.getElementById("coords");
@@ -48,6 +51,20 @@ document.addEventListener("DOMContentLoaded", () => {
         opt.addEventListener('change', () => {
             selection_type = document.querySelector('input[name="selection"]:checked').value;
         });
+    });
+
+    add_or_remove_options = document.querySelectorAll('input[name="add-or-remove"]');
+    add_or_remove = +(document.querySelector('input[name="add-or-remove"]:checked').value == ADD_OR_REMOVE.add);
+    add_or_remove_options.forEach(opt => {
+        opt.addEventListener('change', () => {
+            add_or_remove = +(document.querySelector('input[name="add-or-remove"]:checked').value == ADD_OR_REMOVE.add);
+        });
+    });
+    
+    pull_selection_data = document.getElementById("pull-selection-data");
+    pull_selection_data.addEventListener("click", (event) => {
+        event.preventDefault;
+        updateSelectionTable();
     });
 
     selection_table = document.getElementById('data-table');

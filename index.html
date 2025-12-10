@@ -39,13 +39,17 @@
                 <label for="individual">Individual</label>
                 <input type="radio" id="box" value="box" name="selection">
                 <label for="box">Box</label>
+                <br>
+                <input type="radio" id="add" value="add" name="add-or-remove" checked>
+                <label for="add">Add</label>
+                <input type="radio" id="remove" value="remove" name="add-or-remove">
+                <label for="remove">Remove</label>
             </div>
         </div>
 
         <div id="canvas-container"></div>
 
-        <div id="data-table">
-
-        </div>
+        <button id="pull-selection-data">Update Table From Selection</button>
+        <div id="data-table"></div>
     </body>
 </html>
