@@ -1,19 +1,5 @@
 // Map data
-
-let map_img;
-let metadata = {
-    xscale_deg: 0.0002777777777777777775,
-    yscale_deg: 0.0002777777777777777775,
-    emin_m: 117.5,
-    emax_m: 691.94488525391,
-    extent: {
-        xmin: 110.3387499888889067,
-        ymin: 24.8320833444444418,
-        xmax: 110.5731944333333558,
-        ymax: 25.1384722333333315,
-    }
-}
-
+let selected_map_data = {};
 let map;
 
 let ocean = {
@@ -36,6 +22,7 @@ const BG = "bg";
 const SLOPE = "slope";
 const GROUP = "group";
 const OCEAN = "ocean";
+const SELECT = "select";
 
 // =========================
 //   p5js-called functions
@@ -43,14 +30,20 @@ const OCEAN = "ocean";
 
 // preload map
 function preload() {
-    map_img = loadImage("map.png");
-    hlbmap = loadImage("hlbmap.png")
+    for (item of map_data) {
+        if (item.img_src == selected_img) {
+            item.img = loadImage(item.img_src);
+            selected_map_data = item;
+        }
+    }
+
 }
 
 // perform setup
 function setup() {
     //initialize the map
-    map = new RegionMap(map_img, metadata);
+    console.log(map_data)
+    map = new RegionMap(selected_map_data.img, selected_map_data.map_data_metadata);
     // init data arrays
     let [
         local_maxima, 
@@ -67,6 +60,7 @@ function setup() {
     oh.add(SLOPE, show_slope_overlay);
     oh.add(GROUP, show_group_overlay);
     oh.add(OCEAN, true);
+    oh.add(SELECT, true);
 
     // perform per-pixel setup operations
     iterateMap((r, c) => {

@@ -14,6 +14,8 @@ let mouse;
 let show_slope_overlay = false;
 let show_group_overlay = false;
 
+let selected_img;
+
 document.addEventListener("DOMContentLoaded", () => {
     coords = document.getElementById("coords");
     elevation = document.getElementById("elevation");
@@ -33,6 +35,8 @@ document.addEventListener("DOMContentLoaded", () => {
     sea_level.max = 256;
     sea_level.value = -1;
     sea_level.addEventListener("input", updateSeaLevel);
+
+    selected_img = (new URLSearchParams(window.location.search)).get("img_src");
 });
 
 // Handle regular DOM updates
