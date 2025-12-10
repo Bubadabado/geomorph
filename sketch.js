@@ -26,7 +26,8 @@ const SELECT = "select";
 
 let group_data = {
     labels: [],
-    selected: []
+    selected: [],
+    selected_metadata: []
 }
 let mouse_prev = {
     x: 0,
@@ -34,7 +35,7 @@ let mouse_prev = {
 };
 const SELECTION_TYPES = {
     individual: "individual",
-    box: "box",
+    box_select: "box",
 }
 const SELECTION_COL = makeCol(() => 255, 160);
 
@@ -66,7 +67,8 @@ function setup() {
     ] = Array(5).fill(0).map(() => initArray());
 
     // initialize canvas layers
-    createCanvas(map.bounds.w, map.bounds.h);
+    const cnv = createCanvas(map.bounds.w, map.bounds.h);
+    cnv.parent('canvas-container');
     map.img.loadPixels();
     oh = new OverlayHandler(map.bounds.w, map.bounds.h);
     oh.add(BG, true);
@@ -81,21 +83,60 @@ function setup() {
         local_minima[r][c] = findExtrema(r, c, 5, false);
     });
     // label connected maxima and minima separately
-    labelCntdCmpts(local_maxima, labels_maxima);
     labelCntdCmpts(local_minima, labels_minima);
     // flat floodfill minima to create groups
     groupFeatures(labels_minima, labels_minima);
     // combine minima groups (declutters non-areas of interest)
     let combined_minima = [...Array(map.bounds.h)].map(() => Array(map.bounds.w).fill(0));
+    current_label = 1; //reset counter
     labelCntdCmpts(labels_minima, combined_minima, 0);
+    labelCntdCmpts(local_maxima, labels_maxima);
+
     // floodfill maxima to create groups
     let groups = combined_minima.map(row => [...row]);
     groupFeatures(labels_maxima, groups, false);
     // floodfill minima once again (high->low) to handle plateaus
     groupFeatures(local_minima, groups, false);
 
+    // populate accessible group data
     group_data.labels = groups;
     group_data.selected = initArray();
+    group_data.selected_metadata = Array.from(
+        { length: current_label }, 
+        (_, label) => ({
+            selected: false,
+            label,
+            pixels: [], //store r, c, slope, elev
+            area() { 
+                return this.pixels.reduce((tot, p) => {
+                    return tot + (map.dx_m(p.r) * map.dy_m());
+                }, 0);
+            },
+            maxSlope() {
+                return this.pixels.reduce((ex, p) => max(ex, p.slope), -Infinity);
+            },
+            peak() {
+                return map.mapRangeToElev(
+                    this.pixels.reduce((ex, p) => max(ex, p.elev), -Infinity)
+                );
+            },
+            trough() {
+                return map.mapRangeToElev(
+                    this.pixels.reduce((ex, p) => min(ex, p.elev), Infinity)
+                );
+            },
+            height() { return this.peak() - this.trough(); },
+        }
+    ));
+    iterateMap((r, c) => {
+        if (groups[r][c] !== false) {
+            group_data.selected_metadata[groups[r][c]].pixels.push({
+                r, c,
+                elev: map.getValue(r, c),
+                slope: map.slope(r, c),
+            });
+        }
+    });
 
     // Draw colors to the buffer given pre-computed data arrays
     oh.drawImageToLayer(BG, map.img);
@@ -126,11 +167,12 @@ function draw() {
     noFill();
     strokeWeight(2);
     stroke(255, 255, 255, 200);
-    if (mouseIsPressed && selection_type == SELECTION_TYPES.box) {
+    if (mouseIsPressed && selection_type == SELECTION_TYPES.box_select) {
         rect(mouse_prev.x, mouse_prev.y, mouse.x - mouse_prev.x, mouse.y - mouse_prev.y);
     }
 }
 
+// Handle mouse input
 function mousePressed() {
     switch (selection_type) {
         case SELECTION_TYPES.individual:
@@ -140,16 +182,17 @@ function mousePressed() {
                 updateSelection(r, c);
             }
             break;
-        case SELECTION_TYPES.box:
+        case SELECTION_TYPES.box_select:
             mouse_prev = mouse;
             break;
         default:
     }
+    updateSelectionTable();
 }
-
 function mouseReleased() {
-    if (selection_type == SELECTION_TYPES.box) {
+    if (selection_type == SELECTION_TYPES.box_select) {
         updateSelectionBox(mouse_prev.y, mouse_prev.x, mouse.y, mouse.x);
+        updateSelectionTable();
     }
 }
 
@@ -184,6 +227,7 @@ function updatePuddle(r, c) {
         oh.writeToLayer(r, c, OCEAN, ocean.color);
 }
 
+// Handle selections
 function updateSelection(r, c) {
     label = group_data.labels[r][c];
     if (label !== false) {
@@ -194,6 +238,7 @@ function updateSelection(r, c) {
         });
 
         group_data.selected[r][c] = !group_data.selected[r][c];
+        group_data.selected_metadata[label].selected = group_data.selected[r][c];
         while (stack.length > 0) {
             p = stack.pop();
             for (let rr = -1; rr <= 1; rr++) {
@@ -210,6 +255,7 @@ function updateSelection(r, c) {
                     stack.push({ r: r2, c: c2 });
 
                     group_data.selected[r2][c2] = !group_data.selected[r2][c2];
+                    group_data.selected_metadata[label].selected = group_data.selected[r][c];
                 }
             }
         }
@@ -218,8 +264,7 @@ function updateSelection(r, c) {
         if (group_data.selected[r][c]) 
             oh.writeToLayer(r, c, SELECT, SELECTION_COL);
     }, [SELECT]);
-}
-
+} 
 function updateSelectionBox(rr1, cc1, rr2, cc2) {
     r_min = min(rr1, rr2);
     r_max = max(rr1, rr2);
@@ -239,6 +284,7 @@ function updateSelectionBox(rr1, cc1, rr2, cc2) {
                     });
 
                     group_data.selected[r][c] = !group_data.selected[r][c];
+                    group_data.selected_metadata[label].selected = group_data.selected[r][c];
                     while (stack.length > 0) {
                         p = stack.pop();
                         for (let rr = -1; rr <= 1; rr++) {
@@ -256,6 +302,7 @@ function updateSelectionBox(rr1, cc1, rr2, cc2) {
                                 stack.push({ r: r2, c: c2 });
 
                                 group_data.selected[r2][c2] = !group_data.selected[r2][c2];
+                                group_data.selected_metadata[label].selected = group_data.selected[r][c];
                                 visited[r2][c2] = true;
                             }
                         }

@@ -39,12 +39,14 @@ class RegionMap {
         ) * Math.PI / 180;
     }
 
+    // get pixel size in m
+    dx_m(r) { return this.xscale_deg * RegionMap.M_PER_DEG * Math.cos(this.lat(r)); }
+    dy_m( ) { return this.yscale_deg * RegionMap.M_PER_DEG; }
+
     // discrete slope approximation using central difference method
     slope(r, c) { 
-        const dx_m = (r) => this.xscale_deg * RegionMap.M_PER_DEG * Math.cos(this.lat(r));
-        const dy_m = ( ) => this.yscale_deg * RegionMap.M_PER_DEG;
-        const dzdx = (r, c) => (this.getElevAt(c + 1, r) - this.getElevAt(c - 1, r)) / (2 * dx_m(r));
-        const dzdy = (r, c) => (this.getElevAt(c, r + 1) - this.getElevAt(c, r - 1)) / (2 * dy_m( ));
+        const dzdx = (r, c) => (this.getElevAt(c + 1, r) - this.getElevAt(c - 1, r)) / (2 * this.dx_m(r));
+        const dzdy = (r, c) => (this.getElevAt(c, r + 1) - this.getElevAt(c, r - 1)) / (2 * this.dy_m( ));
 
         return (
             Math.atan(Math.sqrt(dzdx(r,c) * dzdx(r,c) + dzdy(r,c) * dzdy(r,c)))

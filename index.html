@@ -6,15 +6,16 @@
         <script src="RegionMap.js"></script>
         <script src="map_data.js"></script>
         <script src="dom_manip.js"></script>
+        <script src="sketch.js"></script>
         <link rel="stylesheet" href="styles.css">
     </head>
     <body>
-        <script src="sketch.js"></script>
         <h3>Region select:</h3>
         <nav>
             <a href="/?img_src=map.png">Guilin–Yangshuo region, China</a>
             <a href="/?img_src=hlbmap.png">Ha Long Bay, Vietnam</a>
         </nav>
+
         <div id="sketch-info">
             <div id="coords"></div>
             <div id="elevation"></div>
@@ -39,6 +40,12 @@
                 <input type="radio" id="box" value="box" name="selection">
                 <label for="box">Box</label>
             </div>
+        </div>
+
+        <div id="canvas-container"></div>
+
+        <div id="data-table">
+
         </div>
     </body>
 </html>

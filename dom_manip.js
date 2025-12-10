@@ -18,6 +18,7 @@ let selected_img;
 
 let selection_type_options;
 let selection_type;
+let selection_table;
 
 document.addEventListener("DOMContentLoaded", () => {
     coords = document.getElementById("coords");
@@ -48,6 +49,8 @@ document.addEventListener("DOMContentLoaded", () => {
             selection_type = document.querySelector('input[name="selection"]:checked').value;
         });
     });
+
+    selection_table = document.getElementById('data-table');
 });
 
 // Handle regular DOM updates
@@ -85,4 +88,43 @@ function updateSeaLevel() {
             ? 0
             : map.mapRangeToElev(sea_level.value)
     }`;
+}
+
+function updateSelectionTable() {
+    // Create table element
+    const table = document.createElement('table');
+    table.classList.add("data-table");
+
+    const headers = ["Label", "Area (m^2)", "Max Slope", "Peak (m)", "Trough (m)", "Height (m)"];
+    const thead = table.createTHead();
+    const headerRow = thead.insertRow();
+
+    headers.forEach(h => {
+        const th = document.createElement('th');
+        th.textContent = h;
+        headerRow.appendChild(th);
+    });
+    
+    const tbody = table.createTBody();
+
+    group_data.selected_metadata
+        .filter(o => o.selected)
+        .forEach(o => {
+            const row = tbody.insertRow();
+
+            [
+                o.label,
+                o.area(),
+                o.maxSlope(),
+                o.peak(),
+                o.trough(),
+                o.height(),
+            ].forEach(item => {
+                const cell = row.insertCell();
+                cell.textContent = item;
+            })
+        });
+    
+    selection_table.innerHTML = "";
+    selection_table.appendChild(table);
 }
