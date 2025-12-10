@@ -16,6 +16,9 @@ let show_group_overlay = false;
 
 let selected_img;
 
+let selection_type_options;
+let selection_type;
+
 document.addEventListener("DOMContentLoaded", () => {
     coords = document.getElementById("coords");
     elevation = document.getElementById("elevation");
@@ -37,6 +40,14 @@ document.addEventListener("DOMContentLoaded", () => {
     sea_level.addEventListener("input", updateSeaLevel);
 
     selected_img = (new URLSearchParams(window.location.search)).get("img_src");
+
+    selection_type_options = document.querySelectorAll('input[name="selection"]');
+    selection_type = document.querySelector('input[name="selection"]:checked').value;
+    selection_type_options.forEach(opt => {
+        opt.addEventListener('change', () => {
+            selection_type = document.querySelector('input[name="selection"]:checked').value;
+        });
+    });
 });
 
 // Handle regular DOM updates

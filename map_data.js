@@ -1,6 +1,6 @@
 const map_data = [
     {
-        name: "Guilin Yangshuo",
+        name: "Guilin–Yangshuo region, China",
         img_src: "map.png",
         citation: "TODO CITATION",
         map_data_metadata: {
@@ -18,7 +18,7 @@ const map_data = [
         rs_data_metadata: "dem"
     },
     {
-        name: "Ha Long Bay",
+        name: "Ha Long Bay, Vietname",
         img_src: "hlbmap.png",
         citation: "TODO CITATION",
         map_data_metadata: {

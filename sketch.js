@@ -24,6 +24,20 @@ const GROUP = "group";
 const OCEAN = "ocean";
 const SELECT = "select";
 
+let group_data = {
+    labels: [],
+    selected: []
+}
+let mouse_prev = {
+    x: 0,
+    y: 0
+};
+const SELECTION_TYPES = {
+    individual: "individual",
+    box: "box",
+}
+const SELECTION_COL = makeCol(() => 255, 160);
+
 // =========================
 //   p5js-called functions
 // =========================
@@ -36,14 +50,13 @@ function preload() {
             selected_map_data = item;
         }
     }
-
 }
 
 // perform setup
 function setup() {
     //initialize the map
-    console.log(map_data)
     map = new RegionMap(selected_map_data.img, selected_map_data.map_data_metadata);
+
     // init data arrays
     let [
         local_maxima, 
@@ -81,6 +94,9 @@ function setup() {
     // floodfill minima once again (high->low) to handle plateaus
     groupFeatures(local_minima, groups, false);
 
+    group_data.labels = groups;
+    group_data.selected = initArray();
+
     // Draw colors to the buffer given pre-computed data arrays
     oh.drawImageToLayer(BG, map.img);
     oh.setGraphics((r, c) => {
@@ -106,6 +122,35 @@ function setup() {
 // Draw each frame
 function draw() {
     oh.draw();
+
+    noFill();
+    strokeWeight(2);
+    stroke(255, 255, 255, 200);
+    if (mouseIsPressed && selection_type == SELECTION_TYPES.box) {
+        rect(mouse_prev.x, mouse_prev.y, mouse.x - mouse_prev.x, mouse.y - mouse_prev.y);
+    }
+}
+
+function mousePressed() {
+    switch (selection_type) {
+        case SELECTION_TYPES.individual:
+            if (map.check_bounds.p(mouse.x, mouse.y)) {
+                const r = mouse.y;
+                const c = mouse.x;
+                updateSelection(r, c);
+            }
+            break;
+        case SELECTION_TYPES.box:
+            mouse_prev = mouse;
+            break;
+        default:
+    }
+}
+
+function mouseReleased() {
+    if (selection_type == SELECTION_TYPES.box) {
+        updateSelectionBox(mouse_prev.y, mouse_prev.x, mouse.y, mouse.x);
+    }
 }
 
 // =========================
@@ -137,6 +182,92 @@ function makeCol(c, a) {
 function updatePuddle(r, c) {
     if (ocean.threshold > map.getValue(r, c))
         oh.writeToLayer(r, c, OCEAN, ocean.color);
+}
+
+function updateSelection(r, c) {
+    label = group_data.labels[r][c];
+    if (label !== false) {
+        let stack = [];
+        stack.push({
+            r: r,
+            c: c
+        });
+
+        group_data.selected[r][c] = !group_data.selected[r][c];
+        while (stack.length > 0) {
+            p = stack.pop();
+            for (let rr = -1; rr <= 1; rr++) {
+                for (let cc = -1; cc <= 1; cc++) {
+                    const r2 = p.r + rr;
+                    const c2 = p.c + cc;
+                    if (false 
+                        || (rr === 0 && cc === 0) 
+                        || !map.check_bounds.p(c2, r2) 
+                        || group_data.labels[r2][c2] !== label
+                        || group_data.selected[r2][c2] == group_data.selected[r][c]
+                    ) continue;
+
+                    stack.push({ r: r2, c: c2 });
+
+                    group_data.selected[r2][c2] = !group_data.selected[r2][c2];
+                }
+            }
+        }
+    }
+    oh.setGraphics((r, c) => {
+        if (group_data.selected[r][c]) 
+            oh.writeToLayer(r, c, SELECT, SELECTION_COL);
+    }, [SELECT]);
+}
+
+function updateSelectionBox(rr1, cc1, rr2, cc2) {
+    r_min = min(rr1, rr2);
+    r_max = max(rr1, rr2);
+    c_min = min(cc1, cc2);
+    c_max = max(cc1, cc2);
+    visited = initArray();
+    for (let r = r_min; r < r_max; r++) {
+        for (let c = c_min; c < c_max; c++) {
+            if (!visited[r][c]) {
+                visited[r][c] = true;
+                label = group_data.labels[r][c];
+                if (label !== false) {
+                    let stack = [];
+                    stack.push({
+                        r: r,
+                        c: c
+                    });
+
+                    group_data.selected[r][c] = !group_data.selected[r][c];
+                    while (stack.length > 0) {
+                        p = stack.pop();
+                        for (let rr = -1; rr <= 1; rr++) {
+                            for (let cc = -1; cc <= 1; cc++) {
+                                const r2 = p.r + rr;
+                                const c2 = p.c + cc;
+                                if (false 
+                                    || (rr === 0 && cc === 0) 
+                                    || !map.check_bounds.p(c2, r2) 
+                                    || visited[r2][c2]
+                                    || group_data.labels[r2][c2] !== label
+                                    || group_data.selected[r2][c2] == group_data.selected[r][c]
+                                ) continue;
+
+                                stack.push({ r: r2, c: c2 });
+
+                                group_data.selected[r2][c2] = !group_data.selected[r2][c2];
+                                visited[r2][c2] = true;
+                            }
+                        }
+                    }
+                }
+                oh.setGraphics((r, c) => {
+                    if (group_data.selected[r][c]) 
+                        oh.writeToLayer(r, c, SELECT, SELECTION_COL);
+                }, [SELECT]);
+            }
+        }
+    }
 }
 
 // =========================
