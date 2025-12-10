@@ -99,6 +99,7 @@ function setup() {
 
     // floodfill maxima to create groups
     let groups = combined_minima.map(row => [...row]);
+    group_data.no_select = combined_minima;
     groupFeatures(labels_maxima, groups, false);
     // floodfill minima once again (high->low) to handle plateaus
     groupFeatures(local_minima, groups, false);
@@ -192,12 +193,10 @@ function mousePressed() {
             break;
         default:
     }
-    // updateSelectionTable();
 }
 function mouseReleased() {
-    if (selection_type == SELECTION_TYPES.box_select) {
+    if (selection_type == SELECTION_TYPES.box_select && map.check_bounds.p(mouse.x, mouse.y)) {
         updateSelectionBox(mouse_prev.y, mouse_prev.x, mouse.y, mouse.x);
-        // updateSelectionTable();
     }
 }
 
@@ -235,7 +234,7 @@ function updatePuddle(r, c) {
 // Handle selections
 function updateSelection(r, c) {
     label = group_data.labels[r][c];
-    if (label !== false) {
+    if (label !== false && group_data.no_select[r][c] == 0) {
         let stack = [];
         stack.push({
             r: r,
@@ -271,14 +270,10 @@ function updateSelection(r, c) {
     }, [SELECT]);
 } 
 function updateSelectionBox(rr1, cc1, rr2, cc2) {
-    r_min = min(rr1, rr2);
-    r_max = max(rr1, rr2);
-    c_min = min(cc1, cc2);
-    c_max = max(cc1, cc2);
     visited = initArray();
-    for (let r = r_min; r < r_max; r++) {
-        for (let c = c_min; c < c_max; c++) {
-            if (!visited[r][c]) {
+    for (let r = min(rr1, rr2); r < max(rr1, rr2); r++) {
+        for (let c = min(cc1, cc2); c < max(cc1, cc2); c++) {
+            if (!visited[r][c] && group_data.no_select[r][c] == 0) {
                 visited[r][c] = true;
                 label = group_data.labels[r][c];
                 if (label !== false) {
