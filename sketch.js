@@ -261,13 +261,13 @@ function updateSelectionBox(rr1, cc1, rr2, cc2) {
                         }
                     }
                 }
-                oh.setGraphics((r, c) => {
-                    if (group_data.selected[r][c]) 
-                        oh.writeToLayer(r, c, SELECT, SELECTION_COL);
-                }, [SELECT]);
             }
         }
     }
+    oh.setGraphics((r, c) => {
+        if (group_data.selected[r][c]) 
+            oh.writeToLayer(r, c, SELECT, SELECTION_COL);
+    }, [SELECT]);
 }
 
 // =========================
