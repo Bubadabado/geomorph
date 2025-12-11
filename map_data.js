@@ -1,7 +1,7 @@
 const map_data = [
     {
         name: "Guilin–Yangshuo region, China",
-        img_src: "geomorph/map.png",
+        img_src: "map.png",
         map_data_metadata: {
             xscale_deg: 0.0002777777777777777775,
             yscale_deg: 0.0002777777777777777775,
@@ -18,7 +18,7 @@ const map_data = [
     },
     {
         name: "Ha Long Bay, Vietname",
-        img_src: "geomorph/hlbmap.png",
+        img_src: "hlbmap.png",
         map_data_metadata: {
             xscale_deg: 0.0002777777777777777775,
             yscale_deg: 0.0002777777777777777775,
