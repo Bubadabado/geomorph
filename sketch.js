@@ -42,7 +42,12 @@ const ADD_OR_REMOVE = {
     add: "add",
     remove: "remove",
 }
-const SELECTION_COL = makeCol(() => 255, 160);
+const SELECTION_COL = {
+    r: 255,
+    g: 0,
+    b: 0,
+    a: 160
+}
 
 // =========================
 //   p5js-called functions
