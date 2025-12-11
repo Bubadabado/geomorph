@@ -63,6 +63,9 @@ function setup() {
     //initialize the map
     map = new RegionMap(selected_map_data.img, selected_map_data.map_data_metadata);
 
+    //load citation
+    updateCitation(data_sets[selected_map_data.dataset].citation);
+
     // init data arrays
     let [
         local_maxima, 

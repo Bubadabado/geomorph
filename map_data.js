@@ -2,7 +2,6 @@ const map_data = [
     {
         name: "Guilin–Yangshuo region, China",
         img_src: "map.png",
-        citation: "TODO CITATION",
         map_data_metadata: {
             xscale_deg: 0.0002777777777777777775,
             yscale_deg: 0.0002777777777777777775,
@@ -15,12 +14,11 @@ const map_data = [
                 ymax: 25.1384722333333315,
             }
         },
-        rs_data_metadata: "dem"
+        dataset: "dem",
     },
     {
         name: "Ha Long Bay, Vietname",
         img_src: "hlbmap.png",
-        citation: "TODO CITATION",
         map_data_metadata: {
             xscale_deg: 0.0002777777777777777775,
             yscale_deg: 0.0002777777777777777775,
@@ -33,13 +31,14 @@ const map_data = [
                 ymax: 20.9076388999999949,
             }
         },
-        rs_data_metadata: "dem"
+        dataset: "dem",
     },
 ]
 
 const data_sets = {
     dem: {
-        name: "TODO",
-        spatial: "30m Spatial Resolution"
+        name: "Copernicus DEM",
+        spatial: "30m Spatial Resolution",
+        citation: "European Space Agency (2024). Copernicus Global Digital Elevation Model. Distributed by OpenTopography. https://doi.org/10.5069/G9028PQB. Accessed 2025-12-10",
     }
 }

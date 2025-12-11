@@ -23,6 +23,8 @@ let selection_type;
 let selection_table;
 let pull_selection_data;
 
+let data_citation;
+
 document.addEventListener("DOMContentLoaded", () => {
     coords = document.getElementById("coords");
     elevation = document.getElementById("elevation");
@@ -68,6 +70,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     selection_table = document.getElementById('data-table');
+
+    data_citation = document.getElementById('data-citation');
 });
 
 // Handle regular DOM updates
@@ -105,6 +109,10 @@ function updateSeaLevel() {
             ? 0
             : map.mapRangeToElev(sea_level.value)
     }`;
+}
+
+function updateCitation(citation) {
+    data_citation.textContent = citation;
 }
 
 function updateSelectionTable() {

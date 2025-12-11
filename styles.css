@@ -83,3 +83,10 @@ table.data-table thead tr th {
     border-bottom: 2px solid black;
 }
 
+#data-citation-container {
+    display: block;
+    width: 100%;
+    margin: 32px auto;
+    text-align: center;
+}
+
